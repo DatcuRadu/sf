@@ -58,7 +58,7 @@ return [
 
         'epicore' => [
             'driver' => 'local',
-            'root'   => '/var/sftp/epicor',
+            'root'   => env('EPICOR_DIR') ?? storage_path('app'),
             'throw'  => true,
         ],
 
