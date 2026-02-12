@@ -23,7 +23,7 @@ class InventoryProcessor
     {
         $disk = Storage::disk('epicore');
 
-        $archiveDir = 'Archive/inventory/' . now()->format('Y-m-d');
+        $archiveDir = 'Inventory/Archive/' . now()->format('Y-m-d');
 
         if (!$disk->exists($archiveDir)) {
             $disk->makeDirectory($archiveDir);
