@@ -17,6 +17,16 @@ use Illuminate\Http\Request;
 use App\Services\Epicor\Estu\EstuBuilder;
 
 
+use App\Http\Controllers\EpicorInventoryController;
+
+Route::prefix('epicor/inventory')->group(function () {
+
+    Route::get('/delta', [EpicorInventoryController::class, 'delta']);
+    Route::get('/full', [EpicorInventoryController::class, 'full']);
+
+});
+
+
 Route::any('/order', function (Request $request) {
 
     $data = [

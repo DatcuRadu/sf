@@ -58,7 +58,7 @@ return [
 
         'epicore' => [
             'driver' => 'local',
-            'root'   => env('EPICOR_DIR') ?? storage_path('app'),
+            'root'   => env('EPICOR_DIR') ?? storage_path('app').'/EPICOR/',
             'throw'  => true,
         ],
 
