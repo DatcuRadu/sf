@@ -25,4 +25,10 @@ class Product extends Model
         'sales_end'     => 'datetime',
         'fields_json'   => 'array',
     ];
+
+    public function histories()
+    {
+        return $this->hasMany(ProductHistory::class);
+    }
+
 }
