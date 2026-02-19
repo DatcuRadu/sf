@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
+use App\Models\WooCommerceSyncLog;
 
 class WooCommerceProductSyncService
 {
@@ -64,6 +65,18 @@ class WooCommerceProductSyncService
         }
 
         if (empty($products)) {
+            WooCommerceSyncLog::create([
+                'sku' => $sku,
+                'status' => 'not_found',
+                'request_payload' => [
+                    'regular_price' => $regularPrice,
+                    'sale_price' => $salePrice,
+                    'qty' => $qty,
+                    'sale_start' => $saleStart,
+                    'sale_end' => $saleEnd,
+                ],
+            ]);
+
             return ['status' => 'not_found'];
         }
 
@@ -106,11 +119,36 @@ class WooCommerceProductSyncService
             return ['status' => 'no_changes'];
         }
 
+        $oldData = [
+            'regular_price' => $product['regular_price'],
+            'sale_price' => $product['sale_price'],
+            'stock_quantity' => $product['stock_quantity'],
+            'date_on_sale_from' => $product['date_on_sale_from'],
+            'date_on_sale_to' => $product['date_on_sale_to'],
+        ];
+
         // 🔄 Facem update
         $response = $this->client()->put(
             $this->baseUrl . '/wp-json/wc/v3/products/' . $product['id'],
             $updateData
         );
+
+        WooCommerceSyncLog::create([
+            'sku' => $sku,
+            'woocommerce_product_id' => $product['id'],
+            'status' => 'updated',
+            'old_data' => $oldData,
+            'new_data' => $updateData,
+            'request_payload' => [
+                'regular_price' => $regularPrice,
+                'sale_price' => $salePrice,
+                'qty' => $qty,
+                'sale_start' => $saleStart,
+                'sale_end' => $saleEnd,
+            ],
+            'response_payload' => $response->json(),
+        ]);
+
 
         return [
             'status' => 'updated',

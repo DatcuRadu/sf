@@ -17,6 +17,26 @@ use Illuminate\Http\Request;
 use App\Services\Epicor\Estu\EstuBuilder;
 
 
+use App\Services\WooCommerceProductSyncService;
+
+Route::get('/test-sync', function () {
+
+    $service = app(WooCommerceProductSyncService::class);
+
+    $result = $service->sync(
+        sku: 'SMS66MC',
+        gtin: null,                // dacă nu ai GTIN
+        regularPrice: 37.00,
+        salePrice: 36.00,
+        qty: 77,
+        saleStart: '12-12-2025',
+        saleEnd: '12-12-2028'
+    );
+
+    return response()->json($result);
+});
+
+
 use App\Http\Controllers\EpicorInventoryController;
 
 Route::prefix('epicor/inventory')->group(function () {
