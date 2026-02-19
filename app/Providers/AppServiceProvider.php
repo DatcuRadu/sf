@@ -25,3 +25,6 @@ class AppServiceProvider extends ServiceProvider
         Product::observe(ProductObserver::class);
     }
 }
+
+
+

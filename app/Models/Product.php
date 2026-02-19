@@ -16,6 +16,9 @@ class Product extends Model
         'qty',
         'gitn',
         'fields_json',
+        'row_hash',
+        'to_sync'
+
     ];
 
     protected $casts = [

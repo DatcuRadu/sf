@@ -1,0 +1,86 @@
+<?php
+
+namespace App\Console\Commands;
+
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
+use App\Services\Epicor\Inventory\InventoryProcessor;
+use App\Jobs\ProcessInventoryBatchJob;
+
+class ProcessFullInventory extends Command
+{
+    protected $signature = 'inventory:full';
+    protected $description = 'Process Epicor Full Inventory file using queue batches';
+
+    public function handle(InventoryProcessor $processor)
+    {
+        // -------------------------------------------------
+        // Global lock to prevent Delta and Full overlapping
+        // -------------------------------------------------
+        $lock = Cache::lock('inventory_global_lock', 7200);
+
+        if (! $lock->get()) {
+            $this->warn('Another inventory job is currently running.');
+            return Command::SUCCESS;
+        }
+
+        try {
+
+            // -------------------------------------------------
+            // Get latest FULL inventory file
+            // -------------------------------------------------
+            $file = $processor->getLatestFile('VM_Full_Inventory_File_');
+
+            if (!$file) {
+                $this->info('No Full inventory file found.');
+                return Command::SUCCESS;
+            }
+
+            $this->info("Processing file: {$file}");
+
+            // -------------------------------------------------
+            // Count total rows without loading entire file
+            // -------------------------------------------------
+            $totalRows = 0;
+            foreach ($processor->streamCsv($file) as $row) {
+                $totalRows++;
+            }
+
+            if ($totalRows === 0) {
+                $this->info('File is empty.');
+                return Command::SUCCESS;
+            }
+
+            $this->info("Total rows detected: {$totalRows}");
+
+            // -------------------------------------------------
+            // Dispatch queue jobs in chunks of 300
+            // -------------------------------------------------
+            $batchSize = 300;
+
+            for ($offset = 0; $offset < $totalRows; $offset += $batchSize) {
+
+                ProcessInventoryBatchJob::dispatch(
+                    $file,
+                    $offset,
+                    $batchSize
+                );
+            }
+
+            $this->info('All batches dispatched to queue.');
+
+            // -------------------------------------------------
+            // Archive file after dispatching jobs
+            // -------------------------------------------------
+           // $processor->archiveFile($file);
+
+            $this->info('File archived successfully.');
+
+        } finally {
+            // Always release lock
+            $lock->release();
+        }
+
+        return Command::SUCCESS;
+    }
+}
