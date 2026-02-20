@@ -9,7 +9,7 @@ class InventoryProcessor
 {
     public function streamCsv(string $path): \Generator
     {
-        $stream = Storage::disk('epicore')->readStream($path);
+        $stream = Storage::disk('epicor_inventory')->readStream($path);
 
         $csv = Reader::createFromStream($stream);
         $csv->setHeaderOffset(null);
@@ -24,7 +24,7 @@ class InventoryProcessor
 
     public function archiveFile(string $path): void
     {
-        $disk = Storage::disk('epicore');
+        $disk = Storage::disk('epicor_inventory');
 
         $archiveDir = 'Inventory/Archive/' . now()->format('Y-m-d');
 
@@ -37,7 +37,7 @@ class InventoryProcessor
 
     public function getLatestFile(string $prefix): ?string
     {
-        return collect(Storage::disk('epicore')->files('Inventory'))
+        return collect(Storage::disk('epicor_inventory')->files('Inventory'))
             ->filter(fn($file) => str_contains($file, $prefix))
             ->sortDesc()
             ->first();
