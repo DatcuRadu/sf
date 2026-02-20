@@ -7,21 +7,24 @@ use League\Csv\Reader;
 
 class InventoryProcessor
 {
-    protected function streamCsv(string $path): \Generator
+    public function streamCsv(string $path): \Generator
     {
-        $stream = Storage::disk('epicore')->readStream($path);
+        $stream = Storage::disk('epicor_inventory')->readStream($path);
 
         $csv = Reader::createFromStream($stream);
-        $csv->setHeaderOffset(0);
+        $csv->setHeaderOffset(null);
 
-        foreach ($csv->getRecords() as $record) {
+        foreach ($csv->getRecords() as $index => $record) {
+            if ($index === 0) {
+                continue;
+            }
             yield $record;
         }
     }
 
-    protected function archiveFile(string $path): void
+    public function archiveFile(string $path): void
     {
-        $disk = Storage::disk('epicore');
+        $disk = Storage::disk('epicor_inventory');
 
         $archiveDir = 'Inventory/Archive/' . now()->format('Y-m-d');
 
@@ -32,9 +35,9 @@ class InventoryProcessor
         $disk->move($path, $archiveDir . '/' . basename($path));
     }
 
-    protected function getLatestFile(string $prefix): ?string
+    public function getLatestFile(string $prefix): ?string
     {
-        return collect(Storage::disk('epicore')->files('Inventory'))
+        return collect(Storage::disk('epicor_inventory')->files('Inventory'))
             ->filter(fn($file) => str_contains($file, $prefix))
             ->sortDesc()
             ->first();

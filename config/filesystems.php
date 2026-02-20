@@ -62,6 +62,14 @@ return [
             'throw'  => true,
         ],
 
+        'epicor_inventory' => [
+            'driver' => 'local',
+            'root'   => env('ESTU_INVENTORY_DIR') ?? storage_path('app').'/EPICOR/',
+            'throw'  => true,
+        ],
+
+
+
 
     ],
 

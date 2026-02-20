@@ -12,7 +12,15 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->command('inventory:delta')
+            ->everySixHours()
+            ->withoutOverlapping()
+            ->name('inventory-global-lock');
+
+        $schedule->command('inventory:full')
+            ->dailyAt('02:00')
+            ->withoutOverlapping()
+            ->name('inventory-global-lock');
     }
 
     /**
