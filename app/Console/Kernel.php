@@ -13,14 +13,12 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         $schedule->command('inventory:delta')
-            ->everySixHours()
-            ->withoutOverlapping()
-            ->name('inventory-global-lock');
+            ->everyFifteenMinutes()
+            ->withoutOverlapping();
 
         $schedule->command('inventory:full')
-            ->dailyAt('02:00')
-            ->withoutOverlapping()
-            ->name('inventory-global-lock');
+            ->everySixHours()
+            ->withoutOverlapping();
     }
 
     /**
@@ -28,7 +26,7 @@ class Kernel extends ConsoleKernel
      */
     protected function commands(): void
     {
-        $this->load(__DIR__.'/Commands');
+        $this->load(__DIR__ . '/Commands');
 
         require base_path('routes/console.php');
     }

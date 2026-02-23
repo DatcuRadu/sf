@@ -32,7 +32,14 @@ class InventoryProcessor
             $disk->makeDirectory($archiveDir);
         }
 
-        $disk->move($path, $archiveDir . '/' . basename($path));
+        $originalName = basename($path);
+
+        $newName = pathinfo($originalName, PATHINFO_FILENAME)
+            . '_' . now()->format('H-i-s')
+            . '.'
+            . pathinfo($originalName, PATHINFO_EXTENSION);
+
+        $disk->move($path, $archiveDir . '/' . $newName);
     }
 
     public function getLatestFile(string $prefix): ?string

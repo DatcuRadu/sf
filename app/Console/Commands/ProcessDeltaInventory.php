@@ -6,6 +6,9 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use App\Services\Epicor\Inventory\InventoryProcessor;
 use App\Jobs\ProcessInventoryBatchJob;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Bus\Batch;
+use Throwable;
 
 class ProcessDeltaInventory extends Command
 {
@@ -57,15 +60,30 @@ class ProcessDeltaInventory extends Command
             // Dispatch queue jobs in chunks of 300
             // -------------------------------------------------
             $batchSize = 300;
+            $jobs = [];
 
             for ($offset = 0; $offset < $totalRows; $offset += $batchSize) {
 
-                ProcessInventoryBatchJob::dispatch(
+                $jobs[] = new ProcessInventoryBatchJob(
                     $file,
                     $offset,
                     $batchSize
                 );
             }
+
+            Bus::batch($jobs)
+                ->then(function (Batch $batch) use ($processor, $file) {
+
+                    // ✅ toate joburile au terminat cu succes
+                    $processor->archiveFile($file);
+
+                    \Log::info("Inventory file archived successfully: {$file}");
+                })
+                ->catch(function (Batch $batch, Throwable $e) {
+
+                    \Log::error("Inventory batch failed: " . $e->getMessage());
+                })
+                ->dispatch();
 
             $this->info('All Delta batches dispatched to queue.');
 
