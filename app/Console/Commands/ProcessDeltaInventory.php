@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\InventoryFile;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use App\Services\Epicor\Inventory\InventoryProcessor;
@@ -56,31 +57,37 @@ class ProcessDeltaInventory extends Command
 
             $this->info("Total Delta rows detected: {$totalRows}");
 
-            // -------------------------------------------------
-            // Dispatch queue jobs in chunks of 300
-            // -------------------------------------------------
             $batchSize = 300;
             $jobs = [];
+            $inventoryFile = InventoryFile::create([
+                'file_name' => $file,
+                'type' => 'delta', // sau full
+                'status' => 'processing',
+                'started_at' => now(),
+                'total_rows'=>$totalRows
+            ]);
 
             for ($offset = 0; $offset < $totalRows; $offset += $batchSize) {
 
                 $jobs[] = new ProcessInventoryBatchJob(
                     $file,
                     $offset,
-                    $batchSize
+                    $batchSize,
+                    $inventoryFile->id
                 );
             }
 
+
             Bus::batch($jobs)
-                ->then(function (Batch $batch) use ($processor, $file) {
-
-                    // ✅ toate joburile au terminat cu succes
+                ->then(function (Batch $batch) use ($processor, $file, $inventoryFile) {
                     $processor->archiveFile($file);
-
+                    $inventoryFile->update([
+                        'status' => 'completed',
+                        'finished_at' => now(),
+                    ]);
                     \Log::info("Inventory file archived successfully: {$file}");
                 })
                 ->catch(function (Batch $batch, Throwable $e) {
-
                     \Log::error("Inventory batch failed: " . $e->getMessage());
                 })
                 ->dispatch();

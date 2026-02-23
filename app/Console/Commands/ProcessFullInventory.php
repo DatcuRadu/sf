@@ -9,6 +9,8 @@ use App\Jobs\ProcessInventoryBatchJob;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Bus\Batch;
 use Throwable;
+use App\Models\InventoryFile;
+
 
 class ProcessFullInventory extends Command
 {
@@ -61,27 +63,45 @@ class ProcessFullInventory extends Command
             // -------------------------------------------------
             $batchSize = 300;
             $jobs = [];
+            $inventoryFile = InventoryFile::create([
+                'file_name' => $file,
+                'type' => 'full', // sau full
+                'status' => 'processing',
+                'started_at' => now(),
+                'total_rows'=>$totalRows
+            ]);
 
             for ($offset = 0; $offset < $totalRows; $offset += $batchSize) {
 
                 $jobs[] = new ProcessInventoryBatchJob(
                     $file,
                     $offset,
-                    $batchSize
+                    $batchSize,
+                    $inventoryFile->id
                 );
             }
 
-            Bus::batch($jobs)
-                ->then(function (Batch $batch) use ($processor, $file) {
 
-                    // ✅ toate joburile au terminat cu succes
+
+            Bus::batch($jobs)
+                ->then(function (Batch $batch) use ($processor, $file, $inventoryFile) {
+
                     $processor->archiveFile($file);
 
-                    \Log::info("Inventory file archived successfully: {$file}");
-                })
-                ->catch(function (Batch $batch, Throwable $e) {
+                    $inventoryFile->update([
+                        'status' => 'completed',
+                        'finished_at' => now(),
+                    ]);
 
-                    \Log::error("Inventory batch failed: " . $e->getMessage());
+                })
+                ->catch(function (Batch $batch, Throwable $e) use ($inventoryFile) {
+
+                    $inventoryFile->update([
+                        'status' => 'failed',
+                        'error_message' => $e->getMessage(),
+                        'finished_at' => now(),
+                    ]);
+
                 })
                 ->dispatch();
 
