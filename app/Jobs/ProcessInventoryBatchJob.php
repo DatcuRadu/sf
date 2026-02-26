@@ -9,10 +9,13 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Bus\Batchable;
+use App\Models\InventoryFile;
+
 
 class ProcessInventoryBatchJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels,Batchable;
 
     public string $file;
     public int $offset;
@@ -28,11 +31,14 @@ class ProcessInventoryBatchJob implements ShouldQueue
     private const COL_SALE  = 2;   // Sale Price
     private const GTIN  = 4;   // Sale Price
 
-    public function __construct(string $file, int $offset, int $limit)
+    public $inventoryFileId;
+
+    public function __construct(string $file, int $offset, int $limit, int $inventoryFileId)
     {
         $this->file   = $file;
         $this->offset = $offset;
         $this->limit  = $limit;
+        $this->inventoryFileId = $inventoryFileId;
     }
 
     public function handle(InventoryProcessor $processor): void
@@ -101,6 +107,11 @@ class ProcessInventoryBatchJob implements ShouldQueue
             }
 
             $processed++;
+
+
         }
+
+        InventoryFile::where('id', $this->inventoryFileId)
+            ->increment('processed_rows', $processed);
     }
 }

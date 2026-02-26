@@ -6,6 +6,11 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use App\Services\Epicor\Inventory\InventoryProcessor;
 use App\Jobs\ProcessInventoryBatchJob;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Bus\Batch;
+use Throwable;
+use App\Models\InventoryFile;
+
 
 class ProcessFullInventory extends Command
 {
@@ -57,15 +62,50 @@ class ProcessFullInventory extends Command
             // Dispatch queue jobs in chunks of 300
             // -------------------------------------------------
             $batchSize = 300;
+            $jobs = [];
+            $inventoryFile = InventoryFile::create([
+                'file_name' => $file,
+                'type' => 'full', // sau full
+                'status' => 'processing',
+                'started_at' => now(),
+                'total_rows'=>$totalRows
+            ]);
 
             for ($offset = 0; $offset < $totalRows; $offset += $batchSize) {
 
-                ProcessInventoryBatchJob::dispatch(
+                $jobs[] = new ProcessInventoryBatchJob(
                     $file,
                     $offset,
-                    $batchSize
+                    $batchSize,
+                    $inventoryFile->id
                 );
             }
+
+
+
+            Bus::batch($jobs)
+                ->then(function (Batch $batch) use ($processor, $file, $inventoryFile) {
+
+                    $processor->archiveFile($file);
+
+                    $inventoryFile->update([
+                        'status' => 'completed',
+                        'finished_at' => now(),
+                    ]);
+
+                })
+                ->catch(function (Batch $batch, Throwable $e) use ($inventoryFile) {
+
+                    $inventoryFile->update([
+                        'status' => 'failed',
+                        'error_message' => $e->getMessage(),
+                        'finished_at' => now(),
+                    ]);
+
+                })
+                ->dispatch();
+
+
 
             $this->info('All batches dispatched to queue.');
 
