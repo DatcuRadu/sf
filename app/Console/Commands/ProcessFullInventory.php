@@ -19,15 +19,7 @@ class ProcessFullInventory extends Command
 
     public function handle(InventoryProcessor $processor)
     {
-        // -------------------------------------------------
-        // Global lock to prevent Delta and Full overlapping
-        // -------------------------------------------------
-        $lock = Cache::lock('inventory_global_lock', 7200);
 
-        if (! $lock->get()) {
-            $this->warn('Another inventory job is currently running.');
-            return Command::SUCCESS;
-        }
 
         try {
 
@@ -40,6 +32,9 @@ class ProcessFullInventory extends Command
                 $this->info('No Full inventory file found.');
                 return Command::SUCCESS;
             }
+
+            $file = $processor->moveToBufferAndRename($file);
+            $received_at = $processor->getLastModifiedAt($file);
 
             $this->info("Processing file: {$file}");
 
@@ -68,7 +63,8 @@ class ProcessFullInventory extends Command
                 'type' => 'full', // sau full
                 'status' => 'processing',
                 'started_at' => now(),
-                'total_rows'=>$totalRows
+                'total_rows'=>$totalRows,
+                'received_at' => $received_at,
             ]);
 
             for ($offset = 0; $offset < $totalRows; $offset += $batchSize) {
@@ -117,8 +113,7 @@ class ProcessFullInventory extends Command
             $this->info('File archived successfully.');
 
         } finally {
-            // Always release lock
-            $lock->release();
+
         }
 
         return Command::SUCCESS;
