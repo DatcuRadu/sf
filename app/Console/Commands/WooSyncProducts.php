@@ -21,7 +21,7 @@ class WooSyncProducts extends Command
     public function handle(): int
     {
         // 🔒 Lock global — dacă rulează deja, ieșim
-        $lock = Cache::lock('woo-sync-aproducts', 1);
+        $lock = Cache::lock('woo-sync-aproducts', 300);
 
         if (! $lock->get()) {
             $this->info('Already running. Skipping.');
@@ -33,6 +33,7 @@ class WooSyncProducts extends Command
             $limit = (int) $this->option('limit');
 
             $products = Product::where('to_sync', 1)
+                ->whereNotNull('original_id')
                 ->orderBy('id')
                 ->limit($limit)
                 ->get();
@@ -49,8 +50,26 @@ class WooSyncProducts extends Command
 
                 try {
 
+
+                    if($product->original_id){
+                        $payload = [
+                            'productId'          => $product->original_id,
+                            'regularPrice' => (float) $product->regular_price,
+                            'salePrice'    => (float) $product->sale_price,
+                            'qty'          => (int) $product->qty,
+                            'saleStart'    => $product->sales_start?->format('Y-m-d'),
+                            'saleEnd'      => $product->sales_end?->format('Y-m-d'),
+                        ];
+
+                        // elimină null
+
+
+                        $result = $this->service->syncByProductId(...$payload);
+                    } else {
+
+
                     $payload = [
-                        'sku'          => $product->original_id,
+                        'sku'          => $product->sku,
                         'gtin'         => $product->gitn ?: null,
                         'regularPrice' => (float) $product->regular_price,
                         'salePrice'    => (float) $product->sale_price,
@@ -59,10 +78,12 @@ class WooSyncProducts extends Command
                         'saleEnd'      => $product->sales_end?->format('Y-m-d'),
                     ];
 
-                    // elimină null
 
+                    $result = $this->service->sfync(...$payload);
+                    }
 
-                    $result = $this->service->sync(...$payload);
+                    $this->info('Result:');
+                    $this->line(print_r($result, true));
 
                     if (($result['status'] ?? null) !== 'not_found') {
                         $product->update(['to_sync' => 0]);

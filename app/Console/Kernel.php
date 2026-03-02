@@ -16,9 +16,13 @@ class Kernel extends ConsoleKernel
             ->everyFifteenMinutes()
             ->withoutOverlapping();
 
-        $schedule->command('inventory:full')
-            ->everySixHours()
+        $schedule->command('woo:sync-products')
+            ->everyFifteenMinutes()
             ->withoutOverlapping();
+
+//        $schedule->command('inventory:full')
+//            ->everySixHours()
+//            ->withoutOverlapping();
     }
 
     /**
