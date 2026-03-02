@@ -146,6 +146,7 @@ class WooCommerceProductSyncService
         WooCommerceSyncLog::create([
             'woocommerce_product_id' => $productId,
             'status' => $status,
+            'sku' => 'auto',
             'old_data' => [
                 'regular_price' => $product['regular_price'],
                 'sale_price' => $product['sale_price'],
