@@ -57,6 +57,7 @@ class WooCommerceProductSyncService
     ): array {
 
         $requestPayload = [
+
             'regular_price' => $regularPrice,
             'sale_price'    => $salePrice,
             'qty'           => $qty,
@@ -73,6 +74,7 @@ class WooCommerceProductSyncService
 
             WooCommerceSyncLog::create([
                 'woocommerce_product_id' => $productId,
+                'sku' => 'auto',
                 'status' => 'not_found_by_id',
                 'request_payload' => $requestPayload,
                 'response_payload' => $response->json(),
