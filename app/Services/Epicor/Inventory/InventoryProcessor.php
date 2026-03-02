@@ -4,6 +4,7 @@ namespace App\Services\Epicor\Inventory;
 
 use Illuminate\Support\Facades\Storage;
 use League\Csv\Reader;
+use Illuminate\Support\Carbon;
 
 class InventoryProcessor
 {
@@ -44,10 +45,30 @@ class InventoryProcessor
 
     public function getLatestFile(string $prefix): ?string
     {
-        return collect(Storage::disk('epicor_inventory')->files('Inventory'))
-            ->filter(fn($file) => str_contains($file, $prefix))
-            ->sortDesc()
+        $disk = Storage::disk('epicor_inventory');
+
+        return collect($disk->files('Inventory'))
+            ->filter(fn ($file) =>
+                str_contains($file, $prefix) &&
+                str_ends_with($file, '.csv')
+            )
+            ->sortByDesc(fn ($file) =>
+            $disk->lastModified($file)
+            )
             ->first();
+    }
+
+    public function getLastModifiedAt(string $file): ?Carbon
+    {
+        $disk = Storage::disk('epicor_inventory');
+
+        if (! $disk->exists($file)) {
+            return null;
+        }
+
+        return Carbon::createFromTimestamp(
+            $disk->lastModified($file)
+        );
     }
 
     // ===============================
@@ -88,5 +109,33 @@ class InventoryProcessor
         $this->archiveFile($file);
 
         return ['processed_full' => $file];
+    }
+
+    public function moveToBufferAndRename(string $file): ?string
+    {
+        $disk = Storage::disk('epicor_inventory');
+
+        if (! $disk->exists($file)) {
+            return null;
+        }
+
+        $now = Carbon::now()->format('Ymd-His');
+        // exemplu: 20260227_191530
+
+        $filename = pathinfo($file, PATHINFO_FILENAME);
+        $extension = pathinfo($file, PATHINFO_EXTENSION);
+
+        $newName = $filename . '_' . $now . '.' . $extension;
+
+        $newPath = 'Buffer/' . $newName;
+
+        // creează folder dacă nu există
+        if (! $disk->exists('Buffer')) {
+            $disk->makeDirectory('Buffer', 0775, true);
+        }
+
+        $disk->move($file, $newPath);
+
+        return $newPath;
     }
 }

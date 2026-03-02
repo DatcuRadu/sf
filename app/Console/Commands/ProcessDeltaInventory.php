@@ -18,27 +18,19 @@ class ProcessDeltaInventory extends Command
 
     public function handle(InventoryProcessor $processor)
     {
-        // -------------------------------------------------
-        // Global lock prevents Full & Delta running together
-        // -------------------------------------------------
-        $lock = Cache::lock('inventory_global_lock', 3600);
 
-        if (! $lock->get()) {
-            $this->warn('Another inventory job is currently running.');
-            return Command::SUCCESS;
-        }
 
         try {
 
-            // -------------------------------------------------
-            // Get latest DELTA file
-            // -------------------------------------------------
             $file = $processor->getLatestFile('VM_Inv_Delta_');
 
             if (!$file) {
                 $this->info('No Delta inventory file found.');
                 return Command::SUCCESS;
             }
+
+            $file = $processor->moveToBufferAndRename($file);
+            $received_at = $processor->getLastModifiedAt($file);
 
             $this->info("Processing Delta file: {$file}");
 
@@ -64,7 +56,8 @@ class ProcessDeltaInventory extends Command
                 'type' => 'delta', // sau full
                 'status' => 'processing',
                 'started_at' => now(),
-                'total_rows'=>$totalRows
+                'total_rows' => $totalRows,
+                'received_at' => $received_at
             ]);
 
             for ($offset = 0; $offset < $totalRows; $offset += $batchSize) {
@@ -97,12 +90,12 @@ class ProcessDeltaInventory extends Command
             // -------------------------------------------------
             // Archive file after dispatch
             // -------------------------------------------------
-           // $processor->archiveFile($file);
+            // $processor->archiveFile($file);
 
             $this->info('Delta file archived successfully.');
 
         } finally {
-            $lock->release();
+
         }
 
         return Command::SUCCESS;
