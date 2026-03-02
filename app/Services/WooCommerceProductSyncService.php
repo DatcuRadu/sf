@@ -47,6 +47,121 @@ class WooCommerceProductSyncService
         return $response->json();
     }
 
+    public function syncByProductId(
+        int $productId,
+        float $regularPrice,
+        float $salePrice,
+        int $qty,
+        ?string $saleStart,
+        ?string $saleEnd
+    ): array {
+
+        $requestPayload = [
+            'regular_price' => $regularPrice,
+            'sale_price'    => $salePrice,
+            'qty'           => $qty,
+            'sale_start'    => $saleStart,
+            'sale_end'      => $saleEnd,
+        ];
+
+        // 🔎 1️⃣ GET produs
+        $response = $this->client()->get(
+            $this->baseUrl . '/wp-json/wc/v3/products/' . $productId
+        );
+
+        if ($response->failed()) {
+
+            WooCommerceSyncLog::create([
+                'woocommerce_product_id' => $productId,
+                'status' => 'not_found_by_id',
+                'request_payload' => $requestPayload,
+                'response_payload' => $response->json(),
+            ]);
+
+            return ['status' => 'not_found_by_id'];
+        }
+
+        $product = $response->json();
+
+        $updateData = [];
+        $needsUpdate = false;
+
+        // 🔍 Comparări
+        if ((float)$product['regular_price'] !== $regularPrice) {
+            $updateData['regular_price'] = (string)$regularPrice;
+            $needsUpdate = true;
+        }
+
+        if ((float)$product['sale_price'] !== $salePrice) {
+            $updateData['sale_price'] = (string)$salePrice;
+            $needsUpdate = true;
+        }
+
+        if ((int)$product['stock_quantity'] !== $qty) {
+            $updateData['stock_quantity'] = $qty;
+            $updateData['manage_stock'] = true;
+            $needsUpdate = true;
+        }
+
+        if ($product['date_on_sale_from'] !== $saleStart) {
+            $updateData['date_on_sale_from'] = $saleStart;
+            $needsUpdate = true;
+        }
+
+        if ($product['date_on_sale_to'] !== $saleEnd) {
+            $updateData['date_on_sale_to'] = $saleEnd;
+            $needsUpdate = true;
+        }
+
+        // 📌 Dacă nu sunt modificări
+        if (!$needsUpdate) {
+
+            WooCommerceSyncLog::create([
+                'woocommerce_product_id' => $productId,
+                'sku' => 'auto',
+                'status' => 'no_changes',
+                'old_data' => [
+                    'regular_price' => $product['regular_price'],
+                    'sale_price' => $product['sale_price'],
+                    'stock_quantity' => $product['stock_quantity'],
+                    'date_on_sale_from' => $product['date_on_sale_from'],
+                    'date_on_sale_to' => $product['date_on_sale_to'],
+                ],
+                'request_payload' => $requestPayload,
+            ]);
+
+            return ['status' => 'no_changes'];
+        }
+
+        // 🔄 UPDATE
+        $updateResponse = $this->client()->put(
+            $this->baseUrl . '/wp-json/wc/v3/products/' . $productId,
+            $updateData
+        );
+
+        $status = $updateResponse->successful() ? 'updated' : 'update_failed';
+
+        WooCommerceSyncLog::create([
+            'woocommerce_product_id' => $productId,
+            'status' => $status,
+            'old_data' => [
+                'regular_price' => $product['regular_price'],
+                'sale_price' => $product['sale_price'],
+                'stock_quantity' => $product['stock_quantity'],
+                'date_on_sale_from' => $product['date_on_sale_from'],
+                'date_on_sale_to' => $product['date_on_sale_to'],
+            ],
+            'new_data' => $updateData,
+            'request_payload' => $requestPayload,
+            'response_payload' => $updateResponse->json(),
+        ]);
+
+        return [
+            'status' => $status,
+            'updated_fields' => $updateData,
+        ];
+    }
+
     public function sync(
         string $sku,
         ?string $gtin,
