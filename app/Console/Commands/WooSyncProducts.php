@@ -3,27 +3,21 @@
 namespace App\Console\Commands;
 
 use App\Models\Product;
-use App\Services\WooCommerceProductSyncService;
+use App\Jobs\WooSincronization;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 
 class WooSyncProducts extends Command
 {
     protected $signature = 'woo:sync-products {--limit=200}';
-    protected $description = 'Sync WooCommerce products';
-
-    public function __construct(
-        protected WooCommerceProductSyncService $service
-    ) {
-        parent::__construct();
-    }
+    protected $description = 'Dispatch WooCommerce sync jobs in parallel';
 
     public function handle(): int
     {
-        $lock = Cache::lock('woo-sync-products', 300);
+        $lock = Cache::lock('woo-sync-products', 600);
 
         if (!$lock->get()) {
-            $this->info('Already running.');
+            $this->info('Woo sync is already running.');
             return Command::SUCCESS;
         }
 
@@ -31,39 +25,51 @@ class WooSyncProducts extends Command
 
             $limit = (int) $this->option('limit');
 
-            Product::where('to_sync', 1)
+            $this->info("Dispatching up to {$limit} products...");
+
+            $query = Product::where('to_sync', 1)
                 ->orderBy('id')
-                ->limit($limit)
-                ->chunkById(100, function ($products) {
+                ->limit($limit);
 
-                    foreach ($products as $product) {
+            $total = $query->count();
 
-                        try {
+            if ($total === 0) {
+                $this->info('No products to sync.');
+                return Command::SUCCESS;
+            }
 
-                            $result = $this->service->sync($product);
+            $this->info("Found {$total} products to queue.");
 
-                            $this->info("SKU {$product->sku} → {$result['status']}");
+            $dispatched = 0;
 
-                            if (in_array($result['status'], ['updated', 'no_changes'])) {
-                                $product->update(['to_sync' => 0]);
-                            }
+            $query->chunkById(200, function ($products) use (&$dispatched) {
 
-                        } catch (\Throwable $e) {
+                foreach ($products as $product) {
 
-                            logger()->error('Woo sync failed', [
-                                'product_id' => $product->id,
-                                'sku'        => $product->sku,
-                                'error'      => $e->getMessage(),
-                            ]);
-                        }
-                    }
-                });
+                    WooSincronization::dispatch($product);
 
-            $this->info('Done.');
+                    $dispatched++;
+
+                    $this->line("Queued SKU {$product->sku}");
+                }
+            });
+
+            $this->info("All jobs dispatched. Total queued: {$dispatched}");
 
             return Command::SUCCESS;
 
+        } catch (\Throwable $e) {
+
+            $this->error('Dispatch failed: ' . $e->getMessage());
+
+            logger()->error('Woo sync dispatch error', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return Command::FAILURE;
+
         } finally {
+
             optional($lock)->release();
         }
     }
