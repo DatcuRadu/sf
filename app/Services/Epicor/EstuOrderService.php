@@ -42,7 +42,7 @@ class EstuOrderService
             ->addHeader([
                 'transaction_date' => $date->format('mdY'),
                 'transaction_time' => $date->format('His'),
-                'customer' => 1,
+                'customer' => 3132,
                 'customer_number' => 1,
                 'transaction_total' => $order['total'] ?? 0,
                 'total_sales_tax' => $order['total_tax'] ?? 0,
@@ -83,6 +83,23 @@ class EstuOrderService
                 'filler' => '   ',
             ]);
         }
+
+
+        foreach ($order['shipping_lines'] as $item) {
+
+            $builder->addDetail([
+                'sku' => 'UPS',
+                'taxable' => 'N',
+                'quantity' => 1,
+                'unit_price' => $item['total'],
+                'extended_price' => $item['total'],
+                'filler' => '   ',
+            ]);
+        }
+
+
+
+
 
         $content = $builder->build();
 
@@ -157,6 +174,6 @@ class EstuOrderService
     {
         return 'Orders/' .
             $order['number'] . '_' .
-            Str::uuid() . '.temp';
+            Str::uuid() . '.DAT';
     }
 }
