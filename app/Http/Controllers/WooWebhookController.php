@@ -56,6 +56,7 @@ class WooWebhookController extends Controller
             // ================= STATUS CHECK =================
 
             if ($validated['status'] !== 'completed') {
+                Log::info('Order not completed yet', ['order_id' => $validated['id']]);
                 return response()->json([
                     'message' => 'Order not completed yet'
                 ], 202);

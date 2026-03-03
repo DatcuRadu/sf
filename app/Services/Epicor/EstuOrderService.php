@@ -26,11 +26,13 @@ class EstuOrderService
     public function generateFromWoo(array $order): string
     {
         if (empty($order['id'])) {
-            throw new Exception('Missing order ID');
+            Log::info('Estu Missing order ID');
+
         }
 
         if (empty($order['line_items'])) {
-            throw new Exception('Order has no line items');
+
+            Log::info(' Epicor Order has no line items');
         }
 
         $builder = app(EstuBuilder::class);
@@ -67,11 +69,14 @@ class EstuOrderService
         foreach ($order['line_items'] as $item) {
 
             if (empty($item['sku'])) {
-                throw new Exception("Missing SKU for line item ID {$item['id']}");
+                Log::info(' Epicor Missing SKU for line item ID');
+
             }
 
             if (($item['quantity'] ?? 0) <= 0) {
-                throw new Exception("Invalid quantity for SKU {$item['sku']}");
+
+                Log::info('Invalid quantity for SKU');
+
             }
 
             $builder->addDetail([
