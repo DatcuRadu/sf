@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Cache;
 class WooSyncProducts extends Command
 {
     protected $signature = 'woo:sync-products {--limit=200}';
-    protected $description = 'Sync WooCommerce products (simple version)';
+    protected $description = 'Sync WooCommerce products';
 
     public function __construct(
         protected WooCommerceProductSyncService $service
@@ -20,11 +20,10 @@ class WooSyncProducts extends Command
 
     public function handle(): int
     {
-        // 🔒 Lock global — dacă rulează deja, ieșim
-        $lock = Cache::lock('woo-sync-aproducts', 300);
+        $lock = Cache::lock('woo-sync-products', 300);
 
-        if (! $lock->get()) {
-            $this->info('Already running. Skipping.');
+        if (!$lock->get()) {
+            $this->info('Already running.');
             return Command::SUCCESS;
         }
 
@@ -32,78 +31,35 @@ class WooSyncProducts extends Command
 
             $limit = (int) $this->option('limit');
 
-            $products = Product::where('to_sync', 1)
-                ->whereNotNull('original_id')
+            Product::where('to_sync', 1)
                 ->orderBy('id')
                 ->limit($limit)
-                ->get();
+                ->chunkById(100, function ($products) {
 
-            if ($products->isEmpty()) {
-                $this->info('No products to sync.');
-                return Command::SUCCESS;
-            }
+                    foreach ($products as $product) {
 
-            $ok = 0;
-            $failed = 0;
+                        try {
 
-            foreach ($products as $product) {
+                            $result = $this->service->sync($product);
 
-                try {
+                            $this->info("SKU {$product->sku} → {$result['status']}");
 
+                            if (in_array($result['status'], ['updated', 'no_changes'])) {
+                                $product->update(['to_sync' => 0]);
+                            }
 
-                    if($product->original_id){
-                        $payload = [
-                            'productId'          => $product->original_id,
-                            'regularPrice' => (float) $product->regular_price,
-                            'salePrice'    => (float) $product->sale_price,
-                            'qty'          => (int) $product->qty,
-                            'saleStart'    => $product->sales_start?->format('Y-m-d'),
-                            'saleEnd'      => $product->sales_end?->format('Y-m-d'),
-                        ];
+                        } catch (\Throwable $e) {
 
-                        // elimină null
-
-
-                        $result = $this->service->syncByProductId(...$payload);
-                    } else {
-
-
-                    $payload = [
-                        'sku'          => $product->sku,
-                        'gtin'         => $product->gitn ?: null,
-                        'regularPrice' => (float) $product->regular_price,
-                        'salePrice'    => (float) $product->sale_price,
-                        'qty'          => (int) $product->qty,
-                        'saleStart'    => $product->sales_start?->format('Y-m-d'),
-                        'saleEnd'      => $product->sales_end?->format('Y-m-d'),
-                    ];
-
-
-                    $result = $this->service->sfync(...$payload);
+                            logger()->error('Woo sync failed', [
+                                'product_id' => $product->id,
+                                'sku'        => $product->sku,
+                                'error'      => $e->getMessage(),
+                            ]);
+                        }
                     }
+                });
 
-                    $this->info('Result:');
-                    $this->line(print_r($result, true));
-
-                    if (($result['status'] ?? null) !== 'not_found') {
-                        $product->update(['to_sync' => 0]);
-                    }
-
-                    $ok++;
-
-                } catch (\Throwable $e) {
-
-                    $failed++;
-
-                    logger()->error('Woo sync failed', [
-                        'product_id' => $product->id,
-                        'sku' => $product->sku,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
-
-            $this->info("Done. OK={$ok}, Failed={$failed}");
+            $this->info('Done.');
 
             return Command::SUCCESS;
 

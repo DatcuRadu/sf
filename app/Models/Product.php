@@ -17,7 +17,9 @@ class Product extends Model
         'gitn',
         'fields_json',
         'row_hash',
-        'to_sync'
+        'to_sync',
+        'woo_product_id',
+        'woo_parent_id'
 
     ];
 
