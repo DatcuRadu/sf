@@ -66,9 +66,9 @@ class ProcessInventoryBatchJob implements ShouldQueue
                 continue;
             }
 
-            $title   = (int)($row[self::TITLE] ?? '');
+            $title   = $row[self::TITLE] ?? '';
 
-            $description   = (int)($row[self::DESC] ?? '');
+            $description   = $row[self::DESC] ?? '';
 
             $qty   = (int)($row[self::COL_QTY] ?? 0);
             $price = (float)($row[self::COL_PRICE] ?? 0);
