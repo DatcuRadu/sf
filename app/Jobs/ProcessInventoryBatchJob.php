@@ -25,11 +25,14 @@ class ProcessInventoryBatchJob implements ShouldQueue
     public $tries = 3;
 
     // 🔒 Coloane fixe Epicor
+
+    private const TITLE = 0;
+    private const DESC = 3;
     private const COL_PRICE = 1;   // #2 Price
     private const COL_UPC   = 5;   // #5 UPC (SKU)
     private const COL_QTY   = 6;   // #7 Quantity on Hand
     private const COL_SALE  = 2;   // Sale Price
-    private const GTIN  = 4;   // Sale Price
+    private const GTIN  = 4;   // GTIN
 
     public $inventoryFileId;
 
@@ -63,6 +66,10 @@ class ProcessInventoryBatchJob implements ShouldQueue
                 continue;
             }
 
+            $title   = (int)($row[self::TITLE] ?? '');
+
+            $description   = (int)($row[self::DESC] ?? '');
+
             $qty   = (int)($row[self::COL_QTY] ?? 0);
             $price = (float)($row[self::COL_PRICE] ?? 0);
             $sale  = (float)($row[self::COL_SALE] ?? 0);
@@ -89,6 +96,8 @@ class ProcessInventoryBatchJob implements ShouldQueue
                     'sale_price'    => $sale,
                     'row_hash'      => $newHash,
                     'to_sync'       => true,
+                    'name'=>$title,
+                    'description'=>$description,
                     'gitn'=>$gtin,
                 ]);
 

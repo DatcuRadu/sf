@@ -36,7 +36,7 @@ class WooSincronization implements ShouldQueue
             }
 
             // ✅ SUCCESS
-            if (in_array($result['status'], ['updated', 'no_changes'])) {
+            if (in_array($result['status'], ['updated', 'no_changes', 'created'])) {
                 $this->product->update(['to_sync' => 0]);
             }
 

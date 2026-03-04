@@ -16,8 +16,8 @@ class WooCommerceProductSyncService
     public function __construct()
     {
         $this->baseUrl = rtrim(config('woocommerce.url'), '/');
-        $this->key     = config('woocommerce.key');
-        $this->secret  = config('woocommerce.secret');
+        $this->key = config('woocommerce.key');
+        $this->secret = config('woocommerce.secret');
     }
 
     protected function client()
@@ -49,13 +49,17 @@ class WooCommerceProductSyncService
         $matches = $this->searchWooProductStrict($product);
 
         if (empty($matches)) {
+            if (empty($matches)) {
+                return $this->createWooProduct($product);
+            }
             return ['status' => 'not_found'];
+
         }
 
         if (count($matches) > 1) {
             Log::warning('Multiple strict Woo matches found', [
-                'sku'   => $product->sku,
-                'gtin'  => $product->gitn,
+                'sku' => $product->sku,
+                'gtin' => $product->gitn,
                 'count' => count($matches),
             ]);
         }
@@ -64,7 +68,7 @@ class WooCommerceProductSyncService
 
         $product->update([
             'woo_product_id' => $woo['id'],
-            'woo_parent_id'  => $woo['parent_id'] ?? null,
+            'woo_parent_id' => $woo['parent_id'] ?? null,
         ]);
 
         return $this->syncByWooId($product, $woo['id']);
@@ -176,16 +180,16 @@ class WooCommerceProductSyncService
         $status = $putResponse->successful() ? 'updated' : 'failed';
 
         WooCommerceSyncLog::create([
-            'sku'                    => $product->sku,
+            'sku' => $product->sku,
             'woocommerce_product_id' => $wooId,
-            'status'                 => $status,
-            'old_data'               => [
-                'regular_price'  => $woo['regular_price'] ?? null,
-                'sale_price'     => $woo['sale_price'] ?? null,
+            'status' => $status,
+            'old_data' => [
+                'regular_price' => $woo['regular_price'] ?? null,
+                'sale_price' => $woo['sale_price'] ?? null,
                 'stock_quantity' => $woo['stock_quantity'] ?? null,
             ],
-            'new_data'               => $updateData,
-            'response_payload'       => $putResponse->json(),
+            'new_data' => $updateData,
+            'response_payload' => $putResponse->json(),
         ]);
 
         return ['status' => $status];
@@ -218,9 +222,76 @@ class WooCommerceProductSyncService
 
         if ((int)($woo['stock_quantity'] ?? 0) !== (int)$product->qty) {
             $updateData['stock_quantity'] = (int)$product->qty;
-            $updateData['manage_stock']   = true;
+            $updateData['manage_stock'] = true;
         }
 
         return $updateData;
+    }
+
+
+    protected function createWooProduct(Product $product): array
+    {
+        try {
+
+            $payload = [
+                'name' => $product->name ?? $product->sku,
+                'description' => $product->description ?? '',
+                'sku' => $product->sku,
+                'status' => 'draft',
+                'type' => 'simple',
+                'regular_price' => (string)$product->regular_price,
+
+                'manage_stock' => true,
+                'stock_quantity' => (int)$product->qty,
+                'meta_data' => [
+                    [
+                        'key' => '_wpm_gtin_code',
+                        'value' => $product->gitn
+                    ]
+                ]
+            ];
+
+
+            $salePrice = (float) $product->sale_price;
+
+            if ($salePrice > 0) {
+                $payload['sale_price'] = (string) $salePrice;
+            }
+            $response = $this->client()->post(
+                $this->baseUrl . '/wp-json/wc/v3/products',
+                $payload
+            );
+
+            if ($response->failed()) {
+
+                Log::error('Woo product creation failed', [
+                    'sku' => $product->sku,
+                    'response' => $response->json()
+                ]);
+
+                return ['status' => 'create_failed'];
+            }
+
+            $woo = $response->json();
+
+            $product->update([
+                'woo_product_id' => $woo['id'],
+                'woo_parent_id' => null
+            ]);
+
+            return [
+                'status' => 'created',
+                'woo_id' => $woo['id']
+            ];
+
+        } catch (\Throwable $e) {
+
+            Log::error('Woo product create exception', [
+                'sku' => $product->sku,
+                'error' => $e->getMessage()
+            ]);
+
+            return ['status' => 'exception'];
+        }
     }
 }
