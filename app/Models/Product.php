@@ -19,7 +19,9 @@ class Product extends Model
         'row_hash',
         'to_sync',
         'woo_product_id',
-        'woo_parent_id'
+        'woo_parent_id',
+        'name',
+        'description',
 
     ];
 
