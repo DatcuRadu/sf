@@ -18,22 +18,13 @@ use App\Services\Epicor\Estu\EstuBuilder;
 
 
 use App\Services\WooCommerceProductSyncService;
+use App\Models\Product;
 
 Route::get('/test-sync', function () {
 
     $service = app(WooCommerceProductSyncService::class);
 
-    $result = $service->sync(
-        sku: 'SMS66MC',
-        gtin: null,                // dacă nu ai GTIN
-        regularPrice: 37.00,
-        salePrice: 36.00,
-        qty: 77,
-        saleStart: '12-12-2025',
-        saleEnd: '12-12-2028'
-    );
-
-    return response()->json($result);
+   DD( $service->searchWooProductStrict(Product::find(212270)));
 });
 
 
@@ -895,6 +886,39 @@ Route::get('/test', function () {
 
 // salvează fișierul
     Storage::disk('local')->put('pp.php', exportPhpConfigWithComments($newdata));
+});
+
+
+
+use Symfony\Component\Finder\Finder;
+Route::get('/debug-orders', function () {
+
+    $parser = app(EstuParser::class);
+
+    $basePath =storage_path('app/EPICOR/ord');
+
+    $finder = new Finder();
+    $finder->files()->in($basePath);
+
+    echo "<pre>";
+
+    foreach ($finder as $file) {
+
+        $path = $file->getRealPath();
+
+        echo "==============================\n";
+        echo "FILE: " . $file->getFilename() . "\n";
+
+        $content = file_get_contents($path);
+
+        $data = $parser->parse($content);
+
+        print_r($data);
+        echo "\n\n";
+    }
+
+    echo "</pre>";
+
 });
 
 
