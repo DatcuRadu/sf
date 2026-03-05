@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\WooWebhookController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\CsvController;
 
 
 
@@ -20,7 +21,7 @@ use App\Http\Controllers\Api\OrderController;
 */
 
 
-
+Route::get('/csv/{inventory}', [CsvController::class, 'index']);
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
