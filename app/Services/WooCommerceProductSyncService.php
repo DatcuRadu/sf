@@ -74,7 +74,7 @@ class WooCommerceProductSyncService
         return $this->syncByWooId($product, $woo['id']);
     }
 
-    protected function searchWooProductStrict(Product $product): array
+    public function searchWooProductStrict(Product $product): array
     {
         $matches = [];
 
@@ -105,40 +105,15 @@ class WooCommerceProductSyncService
 
             // Filter results
             foreach ($items as $item) {
-                // Case-insensitive SKU comparison
+
                 $skuMatch = isset($item['sku']) &&
-                    strcasecmp(trim($item['sku']), trim($product->sku)) === 0;
+                    strtolower(trim($item['sku'])) === strtolower(trim($product->sku));
 
                 if (!$skuMatch) {
                     continue;
                 }
 
-                // GTIN strict match (if exists in product)
-                if (!empty($product->gitn)) {
-                    $gtinMatch = false;
 
-                    // Check meta data for GTIN
-                    if (isset($item['meta_data']) && is_array($item['meta_data'])) {
-                        foreach ($item['meta_data'] as $meta) {
-                            // Check common GTIN meta keys
-                            $gtinKeys = ['_wpm_gtin_code', '_gtin', '_product_gtin', '_sku_gtin'];
-
-                            if (in_array($meta['key'] ?? '', $gtinKeys) &&
-                                isset($meta['value']) &&
-                                strcasecmp(trim($meta['value']), trim($product->gitn)) === 0) {
-                                $gtinMatch = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    // If GTIN doesn't match, skip this item
-                    if (!$gtinMatch) {
-                        continue;
-                    }
-                }
-
-                // Add to matches if all conditions pass
                 $matches[] = $item;
             }
 
