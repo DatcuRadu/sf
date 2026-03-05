@@ -9,6 +9,7 @@ class InventoryFile extends Model
 {
     protected $fillable = [
         'file_name',
+        'archive_path',
         'received_at',
         'type',
         'total_rows',

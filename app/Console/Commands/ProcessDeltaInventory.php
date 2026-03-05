@@ -73,10 +73,11 @@ class ProcessDeltaInventory extends Command
 
             Bus::batch($jobs)
                 ->then(function (Batch $batch) use ($processor, $file, $inventoryFile) {
-                    $processor->archiveFile($file);
+                   $archive_path= $processor->archiveFile($file);
                     $inventoryFile->update([
                         'status' => 'completed',
                         'finished_at' => now(),
+                        'archive_path' => $archive_path,
                     ]);
                     \Log::info("Inventory file archived successfully: {$file}");
                 })

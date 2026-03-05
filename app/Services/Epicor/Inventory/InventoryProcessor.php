@@ -23,7 +23,7 @@ class InventoryProcessor
         }
     }
 
-    public function archiveFile(string $path): void
+    public function archiveFile(string $path)
     {
         $disk = Storage::disk('epicor_inventory');
 
@@ -40,7 +40,12 @@ class InventoryProcessor
             . '.'
             . pathinfo($originalName, PATHINFO_EXTENSION);
 
-        $disk->move($path, $archiveDir . '/' . $newName);
+        $new_path = $archiveDir . '/' . $newName;
+
+        $disk->move($path, $new_path);
+
+        return  $new_path;
+
     }
 
     public function getLatestFile(string $prefix): ?string
