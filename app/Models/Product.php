@@ -36,7 +36,13 @@ class Product extends Model
 
     public function histories()
     {
-        return $this->hasMany(ProductHistory::class);
+        return $this->hasMany(ProductHistory::class)->orderByDesc('changed_at');;
+    }
+
+    public function syncLogs()
+    {
+        return $this->hasMany(WooCommerceSyncLog::class, 'sku', 'sku')
+            ->latest();
     }
 
 }

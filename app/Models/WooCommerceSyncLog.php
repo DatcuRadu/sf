@@ -24,4 +24,9 @@ class WooCommerceSyncLog extends Model
         'request_payload' => 'array',
         'response_payload' => 'array',
     ];
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class, 'sku', 'sku');
+    }
 }
