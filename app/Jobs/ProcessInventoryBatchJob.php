@@ -78,8 +78,13 @@ class ProcessInventoryBatchJob implements ShouldQueue
             $price = (float)($row[self::COL_PRICE] ?? 0);
             $sale  = (float)($row[self::COL_SALE] ?? 0);
             $gtin = ($row[self::GTIN] ?? '');
-            $sale_start   = $row[self::COL_SALE_START] ?? '';
-            $sale_end   = $row[self::COL_SALE_END] ?? '';
+
+
+            $sale_start = trim($row[self::COL_SALE_START] ?? '');
+            $sale_end   = trim($row[self::COL_SALE_END] ?? '');
+
+            $sale_start = $sale_start !== '' ? $sale_start : null;
+            $sale_end   = $sale_end !== '' ? $sale_end : null;
 
 
 
