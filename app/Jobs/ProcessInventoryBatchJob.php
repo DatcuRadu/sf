@@ -34,6 +34,10 @@ class ProcessInventoryBatchJob implements ShouldQueue
     private const COL_SALE  = 2;   // Sale Price
     private const GTIN  = 4;   // GTIN
 
+
+    private const COL_SALE_START  = 60;
+    private const COL_SALE_END  = 61;
+
     public $inventoryFileId;
 
     public function __construct(string $file, int $offset, int $limit, int $inventoryFileId)
@@ -74,6 +78,10 @@ class ProcessInventoryBatchJob implements ShouldQueue
             $price = (float)($row[self::COL_PRICE] ?? 0);
             $sale  = (float)($row[self::COL_SALE] ?? 0);
             $gtin = ($row[self::GTIN] ?? '');
+            $sale_start   = $row[self::COL_SALE_START] ?? '';
+            $sale_end   = $row[self::COL_SALE_END] ?? '';
+
+
 
             // 🔥 Hash doar pe ce contează
             $newHash = hash('sha256', json_encode([
@@ -90,15 +98,18 @@ class ProcessInventoryBatchJob implements ShouldQueue
             if (!$product) {
 
                 Product::create([
-                    'sku'           => $sku,
-                    'qty'           => $qty,
+                    'sku' => $sku,
+                    'qty' => $qty,
                     'regular_price' => $price,
-                    'sale_price'    => $sale,
-                    'row_hash'      => $newHash,
-                    'to_sync'       => true,
-                    'name'=>$title,
-                    'description'=>$description,
-                    'gitn'=>$gtin,
+                    'sale_price' => $sale,
+                    'row_hash' => $newHash,
+                    'to_sync' => true,
+                    'name' => $title,
+                    'description' => $description,
+                    'gitn' => $gtin,
+                    'sales_start' => $sale_start,
+                    'sales_end' => $sale_end,
+
                 ]);
 
             }
@@ -111,6 +122,8 @@ class ProcessInventoryBatchJob implements ShouldQueue
                     'sale_price'    => $sale,
                     'row_hash'      => $newHash,
                     'to_sync'       => true,
+                    'sales_start' => $sale_start,
+                    'sales_end' => $sale_end,
                     'gitn'=>$gtin,
                 ]);
             }
