@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\WooCommerceSyncLog;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class WooCommerceProductSyncService
 {
@@ -231,6 +232,24 @@ class WooCommerceProductSyncService
 
             if ($salePrice > 0) {
                 $payload['sale_price'] = (string) $salePrice;
+
+                $now = Carbon::now();
+
+                $start = $product->sales_start ? Carbon::parse($product->sales_start) : null;
+                $end   = $product->sales_end ? Carbon::parse($product->sales_end) : null;
+                // verifică dacă promoția nu este expirată
+                if (!$end || $end->greaterThan($now)) {
+
+                    $payload['sale_price'] = (string)$product->sale_price;
+
+                    if ($start) {
+                        $payload['date_on_sale_from'] = $start->toIso8601String();
+                    }
+
+                    if ($end) {
+                        $payload['date_on_sale_to'] = $end->toIso8601String();
+                    }
+                }
             }
             $response = $this->client()->post(
                 $this->baseUrl . '/wp-json/wc/v3/products',
