@@ -22,6 +22,7 @@ class Product extends Model
         'woo_parent_id',
         'name',
         'description',
+        'deleted'
 
     ];
 
