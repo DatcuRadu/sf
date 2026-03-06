@@ -20,9 +20,9 @@ class Kernel extends ConsoleKernel
             ->everyFifteenMinutes()
             ->withoutOverlapping();
 
-//        $schedule->command('inventory:full')
-//            ->everySixHours()
-//            ->withoutOverlapping();
+        $schedule->command('inventory:full')
+            ->everySixHours()
+            ->withoutOverlapping();
     }
 
     /**
