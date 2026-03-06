@@ -18,4 +18,10 @@ class ProductHistory extends Model
     protected $casts = [
         'changed_at' => 'datetime',
     ];
+
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
 }

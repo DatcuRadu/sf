@@ -31,7 +31,7 @@ class OrderController extends Controller
         $query->orderBy('created_at', 'desc');
 
         // 📄 PAGINATION
-        $orders = $query->paginate(2);
+        $orders = $query->paginate(20);
 
         return OrderResource::collection($orders);
     }
