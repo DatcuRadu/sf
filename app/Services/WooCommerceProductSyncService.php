@@ -193,7 +193,26 @@ class WooCommerceProductSyncService
         }
 
         if ((float)($woo['sale_price'] ?? 0) !== (float)$product->sale_price) {
-            $updateData['sale_price'] = (string)$product->sale_price;
+
+            $salePrice = (float) $product->sale_price;
+            $now = Carbon::now();
+
+            $start = $product->sales_start ? Carbon::parse($product->sales_start) : null;
+            $end   = $product->sales_end ? Carbon::parse($product->sales_end) : null;
+
+            if ($salePrice > 0 && (!$end || $end->greaterThan($now))) {
+
+                $updateData['sale_price'] = (string) $salePrice;
+
+                if ($start) {
+                    $updateData['date_on_sale_from'] = $start->toIso8601String();
+                }
+
+                if ($end) {
+                    $updateData['date_on_sale_to'] = $end->toIso8601String();
+                }
+
+            }
         }
 
         if ((int)($woo['stock_quantity'] ?? 0) !== (int)$product->qty) {

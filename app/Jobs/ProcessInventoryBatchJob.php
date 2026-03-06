@@ -122,6 +122,8 @@ class ProcessInventoryBatchJob implements ShouldQueue
                     'sale_price'    => $sale,
                     'row_hash'      => $newHash,
                     'to_sync'       => true,
+                    'sales_start' => $sale_start,
+                    'sales_end' => $sale_end,
                     'gitn'=>$gtin,
                 ]);
             }
