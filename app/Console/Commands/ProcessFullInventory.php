@@ -82,7 +82,6 @@ class ProcessFullInventory extends Command
             Bus::batch($jobs)
                 ->then(function (Batch $batch) use ($processor, $file, $inventoryFile) {
 
-                    $processor->archiveFile($file);
                     $archive_path= $processor->archiveFile($file);
 
                     $inventoryFile->update([
