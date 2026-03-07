@@ -12,16 +12,22 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        $schedule->command('inventory:delta')
-            ->everyFifteenMinutes()
-            ->withoutOverlapping();
+//        $schedule->command('inventory:delta')
+//            ->everyFifteenMinutes()
+//            ->withoutOverlapping();
+//
+//
+//
+//        $schedule->command('inventory:full')
+//            ->everySixHours()
+//            ->withoutOverlapping();
 
         $schedule->command('woo:sync-products')
-            ->everyFifteenMinutes()
+            ->everyFiveMinutes()
             ->withoutOverlapping();
 
-        $schedule->command('inventory:full')
-            ->everySixHours()
+        $schedule->command('inventory:process')
+            ->everyFiveMinutes()
             ->withoutOverlapping();
     }
 
