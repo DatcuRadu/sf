@@ -12,6 +12,7 @@ class InventoryFile extends Model
         'archive_path',
         'received_at',
         'type',
+        'batch_id',
         'total_rows',
         'processed_rows',
         'status',

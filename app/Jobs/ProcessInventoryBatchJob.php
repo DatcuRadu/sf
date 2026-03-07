@@ -93,6 +93,7 @@ class ProcessInventoryBatchJob implements ShouldQueue
                 'qty'   => $qty,
                 'price' => $price,
                 'sale'  => $sale,
+                'gtin'=>$gtin
             ]));
 
             $product = Product::where('sku', $sku)
