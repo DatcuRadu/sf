@@ -146,7 +146,7 @@ class ProcessInventoryBatchJob implements ShouldQueue
             ->increment('processed_rows', $processed);
     }
 
-    private function parseNumber($value): float
+    private function parseNumbera($value): float
     {
         return (float) str_replace(',', '', $value ?? 0);
     }
