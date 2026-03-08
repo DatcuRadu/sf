@@ -8,7 +8,8 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\CsvController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\InventoryDiffController;
-
+use App\Http\Controllers\Api\InventoryFileController;
+use App\Http\Controllers\Api\InventoryDebugController;
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -27,6 +28,16 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 
 Route::get('/inventory/{full}/delta/{delta}/diff', [InventoryDiffController::class, 'index']);
 Route::middleware('auth:sanctum')->group(function () {
+
+
+    Route::get(
+        '/inventory-files/{id}/changes',
+        [InventoryDebugController::class, 'changes']
+    );
+
+    Route::get('/inventory-files', [InventoryFileController::class, 'index']);
+    Route::get('/inventory-files/{id}/content', [InventoryFileController::class, 'content']);
+    Route::get('/inventory-files/{inventoryFile}', [InventoryFileController::class, 'show']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::get('/orders', [OrderController::class, 'index']);
