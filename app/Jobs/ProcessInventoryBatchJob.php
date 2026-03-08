@@ -75,8 +75,11 @@ class ProcessInventoryBatchJob implements ShouldQueue
             $description   = $row[self::DESC] ?? '';
 
             $qty   = (int)($row[self::COL_QTY] ?? 0);
-            $price = (float)($row[self::COL_PRICE] ?? 0);
-            $sale  = (float)($row[self::COL_SALE] ?? 0);
+//            $price = (float)($row[self::COL_PRICE] ?? 0);
+//            $sale  = (float)($row[self::COL_SALE] ?? 0);
+
+            $price = $this->parseNumber($row[self::COL_PRICE] ?? 0);
+            $sale  = $this->parseNumber($row[self::COL_SALE] ?? 0);
             $gtin = ($row[self::GTIN] ?? '');
 
 
@@ -141,5 +144,10 @@ class ProcessInventoryBatchJob implements ShouldQueue
 
         InventoryFile::where('id', $this->inventoryFileId)
             ->increment('processed_rows', $processed);
+    }
+
+    private function parseNumber($value): float
+    {
+        return (float) str_replace(',', '', $value ?? 0);
     }
 }
