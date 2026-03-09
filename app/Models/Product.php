@@ -34,7 +34,7 @@ class Product extends Model
         'fields_json'   => 'array',
     ];
 
-    public function histories()
+    public function phistories()
     {
         return $this->hasMany(ProductHistory::class)->orderByDesc('changed_at');;
     }
@@ -44,5 +44,11 @@ class Product extends Model
         return $this->hasMany(WooCommerceSyncLog::class, 'sku', 'sku')
             ->latest();
     }
-
+    public function histories()
+    {
+        return $this->hasMany(
+            \App\Models\InventoryRowHistory::class,
+            'product_id'
+        )->orderByDesc('id');
+    }
 }

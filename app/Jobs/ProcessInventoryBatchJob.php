@@ -11,6 +11,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Bus\Batchable;
 use App\Models\InventoryFile;
+use App\Models\InventoryRowHistory;
 
 
 class ProcessInventoryBatchJob implements ShouldQueue
@@ -100,7 +101,14 @@ class ProcessInventoryBatchJob implements ShouldQueue
             ]));
 
             $product = Product::where('sku', $sku)
-                ->select('id', 'row_hash')
+                ->select(
+                    'id',
+                    'row_hash',
+                    'qty',
+                    'regular_price',
+                    'sale_price',
+                    'gitn'
+                )
                 ->first();
 
             // ➕ Insert dacă lipsește
@@ -121,6 +129,16 @@ class ProcessInventoryBatchJob implements ShouldQueue
 
                 ]);
 
+                InventoryRowHistory::create([
+                    'inventory_file_id' => $this->inventoryFileId,
+                    'product_id' => $product->id,
+                    'sku' => $sku,
+                    'csv_row' => $currentIndex,
+                    'action' => 'created',
+                    'row_hash' => $newHash,
+                    'row_json' => $row
+                ]);
+
             }
             // 🔄 Update doar dacă diferă
             elseif ($product->row_hash !== $newHash) {
@@ -135,6 +153,19 @@ class ProcessInventoryBatchJob implements ShouldQueue
                     'sales_end' => $sale_end,
                     'gitn'=>$gtin,
                 ]);
+
+                $changes = $this->detectChanges($product, $qty, $price, $sale, $gtin);
+
+                InventoryRowHistory::create([
+                    'inventory_file_id' => $this->inventoryFileId,
+                    'product_id' => $product->id,
+                    'sku' => $sku,
+                    'changes_json'=>$changes,
+                    'csv_row' => $currentIndex,
+                    'action' => 'updated',
+                    'row_hash' => $newHash,
+                    'row_json' => $row
+                ]);
             }
 
             $processed++;
@@ -146,8 +177,43 @@ class ProcessInventoryBatchJob implements ShouldQueue
             ->increment('processed_rows', $processed);
     }
 
-    private function parseNumbera($value): float
+    private function parseNumber($value): float
     {
         return (float) str_replace(',', '', $value ?? 0);
+    }
+
+    private function detectChanges($product, $qty, $price, $sale, $gtin): array
+    {
+        $changes = [];
+
+        if ($product->qty != $qty) {
+            $changes['qty'] = [
+                'old' => $product->qty,
+                'new' => $qty
+            ];
+        }
+
+        if ($product->regular_price != $price) {
+            $changes['price'] = [
+                'old' => $product->regular_price,
+                'new' => $price
+            ];
+        }
+
+        if ($product->sale_price != $sale) {
+            $changes['sale_price'] = [
+                'old' => $product->sale_price,
+                'new' => $sale
+            ];
+        }
+
+        if ($product->gitn != $gtin) {
+            $changes['gtin'] = [
+                'old' => $product->gitn,
+                'new' => $gtin
+            ];
+        }
+
+        return $changes;
     }
 }
