@@ -97,7 +97,7 @@ class ProcessInventoryBatchJob implements ShouldQueue
                 'qty'   => $qty,
                 'price' => $price,
                 'sale'  => $sale,
-                'gtin'=>$gtin
+               // 'gtin'=>$gtin
             ]));
 
             $product = Product::where('sku', $sku)
@@ -207,12 +207,12 @@ class ProcessInventoryBatchJob implements ShouldQueue
             ];
         }
 
-        if ($product->gitn != $gtin) {
-            $changes['gtin'] = [
-                'old' => $product->gitn,
-                'new' => $gtin
-            ];
-        }
+//        if ($product->gitn != $gtin) {
+//            $changes['gtin'] = [
+//                'old' => $product->gitn,
+//                'new' => $gtin
+//            ];
+//        }
 
         return $changes;
     }
