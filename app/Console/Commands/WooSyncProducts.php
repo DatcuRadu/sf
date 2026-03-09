@@ -29,6 +29,7 @@ class WooSyncProducts extends Command
 
             $query = Product::where('to_sync', 1)
                 ->orderBy('id')
+                ->where('deleted', 0)
                 ->limit($limit);
 
             $total = $query->count();
@@ -45,6 +46,7 @@ class WooSyncProducts extends Command
             $query->chunkById(200, function ($products) use (&$dispatched) {
 
                 foreach ($products as $product) {
+                    $product->update(['to_sync' => 3]);
 
                     WooSincronization::dispatch($product);
 
