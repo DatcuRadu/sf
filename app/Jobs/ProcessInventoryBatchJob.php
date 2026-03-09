@@ -114,7 +114,7 @@ class ProcessInventoryBatchJob implements ShouldQueue
             // ➕ Insert dacă lipsește
             if (!$product) {
 
-                Product::create([
+                $product = Product::create([
                     'sku' => $sku,
                     'qty' => $qty,
                     'regular_price' => $price,
