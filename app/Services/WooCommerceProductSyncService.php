@@ -307,4 +307,38 @@ class WooCommerceProductSyncService
             return ['status' => 'exception'];
         }
     }
+
+    public function fetchWooProduct(Product $product): ?array
+    {
+        $wooId = $product->woo_product_id;
+
+        if (!$wooId) {
+            return null;
+        }
+
+        try {
+
+            $endpoint = $this->buildEndpoint($product, $wooId);
+
+            $getResponse = $this->client()->get(
+                $this->baseUrl . $endpoint
+            );
+
+            if ($getResponse->failed()) {
+                return null;
+            }
+
+            return $getResponse->json();
+
+        } catch (\Throwable $e) {
+
+            Log::warning('Woo fetch failed', [
+                'sku' => $product->sku,
+                'woo_id' => $wooId,
+                'error' => $e->getMessage()
+            ]);
+
+            return null;
+        }
+    }
 }
