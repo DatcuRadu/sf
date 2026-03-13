@@ -178,7 +178,6 @@ class EstuOrderService
     protected function generateFilename(array $order): string
     {
         return 'Orders/' .
-            $order['number'] . '_' .
-            Str::uuid() . '.DAT';
+            $order['number'].'.DAT';
     }
 }

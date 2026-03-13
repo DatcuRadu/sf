@@ -55,7 +55,10 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 
 Route::post('/order', [WooWebhookController::class, 'handle']);
-   // ->middleware('verify.woo');
+
+Route::post('/order/store', [WooWebhookController::class, 'store']);
+
+Route::get('/order/generate/{id}', [WooWebhookController::class, 'generate']);
 
 
 Route::get('/test', function () {
