@@ -9,6 +9,7 @@ use App\Services\Epicor\EstuOrderService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
+use App\Models\WcOrder;
 
 class WooWebhookController extends Controller
 {
@@ -78,6 +79,8 @@ class WooWebhookController extends Controller
             // ================= GENERARE ESTU =================
             $file = $estuService->generateFromWoo($request->all());
 
+            $this->store($request);
+
             Log::info('ESTU generated successfully', [
                 'order_id' => $validated['id'],
                 'file' => $file
@@ -96,8 +99,64 @@ class WooWebhookController extends Controller
             ]);
 
             return response()->json([
-                'error' => 'Webhook processing failed'
+                'error' => print_r($e->getMessage(),true)
             ], 200);
         }
     }
+
+
+    public function store(Request $request): JsonResponse
+    {
+        try {
+
+            $data = $request->json()->all();
+
+            $order = WcOrder::updateOrCreate(
+                ['wc_order_id' => $data['id']],
+                [
+                    'order_number' => $data['number'] ?? null,
+                    'status'       => $data['status'] ?? null,
+                    'total'        => $data['total'] ?? null,
+                    'currency'     => $data['currency'] ?? null,
+                    'billing'      => $data['billing'] ?? [],
+                    'shipping'     => $data['shipping'] ?? [],
+                    'raw_payload'  => $data,
+                    'epicor_status'=> 'pending'
+                ]
+            );
+
+            return response()->json([
+                'status' => 'saved',
+                'order_id' => $order->id
+            ]);
+
+        } catch (\Throwable $e) {
+
+            Log::error('Order save failed', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'error' => print_r( $e->getMessage(), true)
+            ], 500);
+        }
+    }
+
+
+    public function generate($id, EstuOrderService $estuService)
+    {
+        $order = WcOrder::findOrFail($id);
+
+        $file = $estuService->generateFromWoo($order->raw_payload);
+
+        $order->update([
+            'epicor_status' => 'processing'
+        ]);
+
+        return response()->json([
+            'status' => 'generated',
+            'file' => $file
+        ]);
+    }
+
 }
